@@ -30,6 +30,10 @@ var (
 	DefaultSendingMode = BlockOnSend
 	// DefaultDropSendingModeBufferSizer is the default size of the channel holding incoming metrics
 	DefaultDropSendingModeBufferSizer = 2048
+	// DefaultAggregationFlushInterval is the default interval for the aggregator to flush metrics.
+	DefaultAggregationFlushInterval = 3 * time.Second
+	// DefaultAggregation
+	DefaultAggregation = false
 )
 
 // Options contains the configuration options for a client.
@@ -85,6 +89,10 @@ type Options struct {
 	SendMode SendingMode
 	// DropSendingModeBufferSize is the size of the channel holding incoming metrics
 	DropSendingModeBufferSize int
+	// AggregationFlushInterval is the interval for the aggregator to flush metrics
+	AggregationFlushInterval time.Duration
+	// Aggregation enables/disables client side aggregation
+	Aggregation bool
 }
 
 func resolveOptions(options []Option) (*Options, error) {
@@ -101,6 +109,8 @@ func resolveOptions(options []Option) (*Options, error) {
 		Telemetry:                 DefaultTelemetry,
 		SendMode:                  DefaultSendingMode,
 		DropSendingModeBufferSize: DefaultDropSendingModeBufferSizer,
+		AggregationFlushInterval:  DefaultAggregationFlushInterval,
+		Aggregation:               DefaultAggregation,
 	}
 
 	for _, option := range options {
@@ -216,6 +226,30 @@ func WithBlockOnSendMode() Option {
 func WithDropSendingModeBufferSize(bufferSize int) Option {
 	return func(o *Options) error {
 		o.DropSendingModeBufferSize = bufferSize
+		return nil
+	}
+}
+
+// WithoutAggregationInterval set the aggregation interval
+func WithoutAggregationInterval(interval time.Duration) Option {
+	return func(o *Options) error {
+		o.AggregationFlushInterval = interval
+		return nil
+	}
+}
+
+// WithClientSideAggregation enables client side aggregation
+func WithClientSideAggregation() Option {
+	return func(o *Options) error {
+		o.Aggregation = true
+		return nil
+	}
+}
+
+// WithoutClientSideAggregation disables client side aggregation
+func WithoutClientSideAggregation() Option {
+	return func(o *Options) error {
+		o.Aggregation = false
 		return nil
 	}
 }

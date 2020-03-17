@@ -53,13 +53,9 @@ func setupUDPClientServer(b *testing.B, options []statsd.Option) (*statsd.Client
 	return client, conn
 }
 
-func setupClient(b *testing.B, transport string, sendingMode statsd.SendingMode) (*statsd.Client, io.Closer) {
+func setupClient(b *testing.B, transport string, extraOptions []statsd.Option) (*statsd.Client, io.Closer) {
 	options := []statsd.Option{statsd.WithMaxMessagesPerPayload(1024), statsd.WithoutTelemetry()}
-	if sendingMode == statsd.BlockOnSend {
-		options = append(options, statsd.WithBlockOnSendMode())
-	} else {
-		options = append(options, statsd.WithDropOnSendMode())
-	}
+	options = append(options, extraOptions...)
 
 	if transport == "udp" {
 		return setupUDPClientServer(b, options)
@@ -67,8 +63,8 @@ func setupClient(b *testing.B, transport string, sendingMode statsd.SendingMode)
 	return setupUDSClientServer(b, options)
 }
 
-func benchmarkStatsdDifferentMetrics(b *testing.B, transport string, sendingMode statsd.SendingMode) {
-	client, conn := setupClient(b, transport, sendingMode)
+func benchmarkStatsdDifferentMetrics(b *testing.B, transport string, extraOptions ...statsd.Option) {
+	client, conn := setupClient(b, transport, extraOptions)
 	defer conn.Close()
 
 	n := int32(0)
@@ -89,8 +85,8 @@ func benchmarkStatsdDifferentMetrics(b *testing.B, transport string, sendingMode
 	client.Close()
 }
 
-func benchmarkStatsdSameMetrics(b *testing.B, transport string, sendingMode statsd.SendingMode) {
-	client, conn := setupClient(b, transport, sendingMode)
+func benchmarkStatsdSameMetrics(b *testing.B, transport string, extraOptions ...statsd.Option) {
+	client, conn := setupClient(b, transport, extraOptions)
 	defer conn.Close()
 
 	b.ResetTimer()
@@ -108,32 +104,96 @@ func benchmarkStatsdSameMetrics(b *testing.B, transport string, sendingMode stat
 	client.Close()
 }
 
-// UDP
+/*
+UDP with the same metric
+*/
+
+// blocking + no aggregation
 func BenchmarkStatsdUDPSameMetricBLocking(b *testing.B) {
-	benchmarkStatsdSameMetrics(b, "udp", statsd.BlockOnSend)
+	benchmarkStatsdSameMetrics(b, "udp", statsd.WithBlockOnSendMode(), statsd.WithoutClientSideAggregation())
 }
+
+// dropping + no aggregation
 func BenchmarkStatsdUDPSameMetricDropping(b *testing.B) {
-	benchmarkStatsdSameMetrics(b, "udp", statsd.DropOnSend)
+	benchmarkStatsdSameMetrics(b, "udp", statsd.WithDropOnSendMode(), statsd.WithoutClientSideAggregation())
 }
 
+// blocking + aggregation
+func BenchmarkStatsdUDPSameMetricBLockingAggregation(b *testing.B) {
+	benchmarkStatsdSameMetrics(b, "udp", statsd.WithBlockOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+// dropping + aggregation
+func BenchmarkStatsdUDPSameMetricDroppingAggregation(b *testing.B) {
+	benchmarkStatsdSameMetrics(b, "udp", statsd.WithDropOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+/*
+UDP with the different metrics
+*/
+
+// blocking + no aggregation
 func BenchmarkStatsdUDPDifferentMetricBlocking(b *testing.B) {
-	benchmarkStatsdDifferentMetrics(b, "udp", statsd.BlockOnSend)
+	benchmarkStatsdDifferentMetrics(b, "udp", statsd.WithBlockOnSendMode(), statsd.WithoutClientSideAggregation())
 }
+
+// dropping + no aggregation
 func BenchmarkStatsdUDPDifferentMetricDropping(b *testing.B) {
-	benchmarkStatsdDifferentMetrics(b, "udp", statsd.DropOnSend)
+	benchmarkStatsdDifferentMetrics(b, "udp", statsd.WithDropOnSendMode(), statsd.WithoutClientSideAggregation())
 }
 
-// UDS
+// blocking + aggregation
+func BenchmarkStatsdUDPDifferentMetricBlockingAggregation(b *testing.B) {
+	benchmarkStatsdDifferentMetrics(b, "udp", statsd.WithBlockOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+// dropping + aggregation
+func BenchmarkStatsdUDPDifferentMetricDroppingAggregation(b *testing.B) {
+	benchmarkStatsdDifferentMetrics(b, "udp", statsd.WithDropOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+/*
+UDS with the same metric
+*/
+// blocking + no aggregation
 func BenchmarkStatsdUDSSameMetricBLocking(b *testing.B) {
-	benchmarkStatsdSameMetrics(b, "uds", statsd.BlockOnSend)
-}
-func BenchmarkStatsdUDSSameMetricDropping(b *testing.B) {
-	benchmarkStatsdSameMetrics(b, "uds", statsd.DropOnSend)
+	benchmarkStatsdSameMetrics(b, "uds", statsd.WithBlockOnSendMode(), statsd.WithoutClientSideAggregation())
 }
 
-func BenchmarkStatsdUDPSifferentMetricBlocking(b *testing.B) {
-	benchmarkStatsdDifferentMetrics(b, "uds", statsd.BlockOnSend)
+// dropping + no aggregation
+func BenchmarkStatsdUDSSameMetricDropping(b *testing.B) {
+	benchmarkStatsdSameMetrics(b, "uds", statsd.WithDropOnSendMode(), statsd.WithoutClientSideAggregation())
 }
+
+// blocking + aggregation
+func BenchmarkStatsdUDSSameMetricBLockingAggregation(b *testing.B) {
+	benchmarkStatsdSameMetrics(b, "uds", statsd.WithBlockOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+// dropping + aggregation
+func BenchmarkStatsdUDSSameMetricDroppingAggregation(b *testing.B) {
+	benchmarkStatsdSameMetrics(b, "uds", statsd.WithDropOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+/*
+UDS with different metrics
+*/
+// blocking + no aggregation
+func BenchmarkStatsdUDPSifferentMetricBlocking(b *testing.B) {
+	benchmarkStatsdDifferentMetrics(b, "uds", statsd.WithBlockOnSendMode(), statsd.WithoutClientSideAggregation())
+}
+
+// dropping + no aggregation
 func BenchmarkStatsdUDSDifferentMetricDropping(b *testing.B) {
-	benchmarkStatsdDifferentMetrics(b, "uds", statsd.DropOnSend)
+	benchmarkStatsdDifferentMetrics(b, "uds", statsd.WithDropOnSendMode(), statsd.WithoutClientSideAggregation())
+}
+
+// blocking + aggregation
+func BenchmarkStatsdUDPSifferentMetricBlockingAggregation(b *testing.B) {
+	benchmarkStatsdDifferentMetrics(b, "uds", statsd.WithBlockOnSendMode(), statsd.WithClientSideAggregation())
+}
+
+// dropping + aggregation
+func BenchmarkStatsdUDSDifferentMetricDroppingAggregation(b *testing.B) {
+	benchmarkStatsdDifferentMetrics(b, "uds", statsd.WithDropOnSendMode(), statsd.WithClientSideAggregation())
 }

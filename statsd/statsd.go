@@ -89,7 +89,9 @@ const (
 	gauge metricType = iota
 	count
 	histogram
+	histogramAggregated
 	distribution
+	distributionAggregated
 	set
 	timing
 	event
@@ -114,11 +116,13 @@ type metric struct {
 	globalTags []string
 	name       string
 	fvalue     float64
+	fvalues    []float64
 	ivalue     int64
 	svalue     string
 	evalue     *Event
 	scvalue    *ServiceCheck
 	tags       []string
+	stags      string
 	rate       float64
 }
 
@@ -488,6 +492,9 @@ func (c *Client) Histogram(name string, value float64, tags []string, rate float
 		return ErrNoClient
 	}
 	atomic.AddUint64(&c.metrics.TotalMetricsHistogram, 1)
+	if c.agg != nil {
+		return c.agg.histogram(name, value, tags)
+	}
 	return c.send(metric{metricType: histogram, name: name, fvalue: value, tags: tags, rate: rate})
 }
 
@@ -497,6 +504,9 @@ func (c *Client) Distribution(name string, value float64, tags []string, rate fl
 		return ErrNoClient
 	}
 	atomic.AddUint64(&c.metrics.TotalMetricsDistribution, 1)
+	if c.agg != nil {
+		return c.agg.distribution(name, value, tags)
+	}
 	return c.send(metric{metricType: distribution, name: name, fvalue: value, tags: tags, rate: rate})
 }
 

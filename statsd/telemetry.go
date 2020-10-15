@@ -128,6 +128,8 @@ func (t *telemetryClient) flush() []metric {
 			telemetryCount("datadog.dogstatsd.client.aggregated_context_gauge", int64(aggMetrics.nbContextGauge))
 			telemetryCount("datadog.dogstatsd.client.aggregated_context_set", int64(aggMetrics.nbContextSet))
 			telemetryCount("datadog.dogstatsd.client.aggregated_context_count", int64(aggMetrics.nbContextCount))
+			telemetryCount("datadog.dogstatsd.client.aggregated_context_histogram", int64(aggMetrics.nbContextHistogram))
+			telemetryCount("datadog.dogstatsd.client.aggregated_context_distribution", int64(aggMetrics.nbContextDistribution))
 		}
 	}
 

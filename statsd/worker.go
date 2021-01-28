@@ -57,20 +57,19 @@ func (w *worker) pullMetric() {
 }
 
 func (w *worker) processMetric(m metric) error {
-	if !w.shouldSample(m.rate) {
-		return nil
-	}
 	w.Lock()
 	var err error
-	if err = w.writeMetricUnsafe(m); err == errBufferFull {
-		w.flushUnsafe()
-		err = w.writeMetricUnsafe(m)
+	if w.shouldSampleUnsafe(m.rate) {
+		if err = w.writeMetricUnsafe(m); err == errBufferFull {
+			w.flushUnsafe()
+			err = w.writeMetricUnsafe(m)
+		}
 	}
 	w.Unlock()
 	return err
 }
 
-func (w *worker) shouldSample(rate float64) bool {
+func (w *worker) shouldSampleUnsafe(rate float64) bool {
 	if rate < 1 && w.random.Float64() > rate {
 		return false
 	}
